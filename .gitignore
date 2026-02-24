@@ -27,3 +27,19 @@ Thumbs.db
 .env.local
 .env.development
 .env.production
+
+
+
+        {/* Logo Section */}
+        <Link href="/" className="flex items-center space-x-2">
+          <Image 
+            src="/PulaPathLogo-removebg-preview.png" 
+            alt="PulaPath Logo" 
+            width={35} 
+            height={35} 
+            className="rounded-lg md:w-[45px] md:h-[45px]"
+          />
+          <span className="text-lg md:text-2xl font-bold text-blue-950">
+            Pula<span className="text-blue-600">Path</span>
+          </span>
+        </Link>
