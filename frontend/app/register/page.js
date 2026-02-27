@@ -4,6 +4,7 @@ import Navbar from "../../components/Navbar";
 import Image from "next/image";
 import Link from "next/link";
 import { FaUser, FaUserCircle, FaEnvelope, FaLock } from 'react-icons/fa';
+import { useRouter } from "next/navigation";
 
 export default function Register() {
   const [formData, setFormData] = useState({
