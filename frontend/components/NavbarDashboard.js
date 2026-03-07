@@ -1,7 +1,9 @@
 'use client';
 import { FaBell, FaSearch, FaRobot } from 'react-icons/fa';
+import { useUser } from './useUser';
 
 export default function NavbarDashboard() {
+  const { initials } = useUser();
   return (
     <nav className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-white/90 backdrop-blur-xl border-b border-slate-100 z-[100] flex items-center justify-between transition-all duration-300">
 
@@ -31,7 +33,7 @@ export default function NavbarDashboard() {
         </button>
 
         <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-md shadow-blue-200 cursor-pointer">
-          <span className="text-white text-xs font-black">KP</span>
+          <span className="text-white text-xs font-black">{initials}</span>
         </div>
       </div>
     </nav>

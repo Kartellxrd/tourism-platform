@@ -4,6 +4,7 @@ import {
   FaMapMarkerAlt, FaStar, FaRobot, FaBolt, FaCalendarAlt,
   FaArrowUp, FaArrowRight, FaLeaf, FaWater, FaSun, FaFire
 } from 'react-icons/fa';
+import { useUser } from '../../components/useUser';
 
 const aiSuggestions = [
   {
@@ -91,6 +92,11 @@ export default function Dashboard() {
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { firstName, loading: userLoading } = useUser();
+
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  });
 
   const handleAIQuery = () => {
     if (!aiQuery.trim()) return;
@@ -108,9 +114,14 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="mb-8">
-        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Friday, March 6 · Silver Member</p>
+        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
+          {today} · Silver Member
+        </p>
         <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-slate-900 mb-1">
-          Dumela, <span className="text-blue-600">Kago!</span>
+          Dumela,{' '}
+          <span className="text-blue-600">
+            {userLoading ? '...' : `${firstName}!`}
+          </span>
         </h1>
         <p className="text-slate-400 text-sm font-medium">Your AI has 3 new personalised suggestions waiting.</p>
       </header>

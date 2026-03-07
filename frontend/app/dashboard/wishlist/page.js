@@ -3,7 +3,6 @@ import {
   FaHeart, FaMapMarkerAlt, FaStar, FaRobot,
   FaTrash, FaArrowRight
 } from 'react-icons/fa';
-
 import { useWishlist } from '../../../components/WishListContext';
 
 function WishlistCard({ item, onRemove }) {
@@ -21,13 +20,13 @@ function WishlistCard({ item, onRemove }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
         <div className="absolute top-3 left-3">
-          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${item.tagColor || 'bg-blue-50 text-blue-600'}`}>
+          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${item.tag_color || 'bg-blue-50 text-blue-600'}`}>
             {item.tag}
           </span>
         </div>
 
-        {/* Remove */}
-        <button onClick={() => onRemove(item.id)}
+        {/* Remove — uses destination_id */}
+        <button onClick={() => onRemove(item.destination_id)}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all shadow-sm">
           <FaTrash className="text-xs" />
         </button>
@@ -48,12 +47,13 @@ function WishlistCard({ item, onRemove }) {
             </p>
           </div>
           <div className="text-right flex-shrink-0 ml-2">
-            <span className="text-blue-600 font-black text-base">{item.priceLabel}</span>
+            <span className="text-blue-600 font-black text-base">{item.price_label}</span>
             <p className="text-slate-400 text-[9px]">per person</p>
           </div>
         </div>
 
-        <p className="text-slate-500 text-xs leading-relaxed mb-3 flex-1">{item.desc}</p>
+        {/* description — DB field name */}
+        <p className="text-slate-500 text-xs leading-relaxed mb-3 flex-1">{item.description}</p>
 
         {/* Feature pills */}
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -62,23 +62,23 @@ function WishlistCard({ item, onRemove }) {
           ))}
         </div>
 
-        {/* AI match */}
+        {/* AI match — uses match_score and ai_reason from DB */}
         <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 mb-3">
           <div className="flex items-center gap-2">
             <FaRobot className="text-blue-400 text-[10px] flex-shrink-0" />
-            <p className="text-slate-500 text-[10px] italic flex-1 truncate">{item.aiReason}</p>
+            <p className="text-slate-500 text-[10px] italic flex-1 truncate">{item.ai_reason}</p>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <div className="w-10 h-1 bg-blue-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${item.match}%` }} />
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${item.match_score}%` }} />
               </div>
-              <span className="text-[10px] font-black text-blue-600">{item.match}%</span>
+              <span className="text-[10px] font-black text-blue-600">{item.match_score}%</span>
             </div>
           </div>
         </div>
 
-        {item.savedOn && (
+        {item.saved_at && (
           <p className="text-slate-300 text-[10px] mb-3 flex items-center gap-1">
-            <FaHeart className="text-rose-200 text-[9px]" /> Saved {item.savedOn}
+            <FaHeart className="text-rose-200 text-[9px]" /> Saved {new Date(item.saved_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
           </p>
         )}
 
@@ -91,7 +91,15 @@ function WishlistCard({ item, onRemove }) {
 }
 
 export default function Wishlist() {
-  const { wishlist, removeFromWishlist } = useWishlist();
+  const { wishlist, loading, removeFromWishlist } = useWishlist();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="px-5 md:px-8 py-8 max-w-[1400px] mx-auto">
@@ -114,8 +122,8 @@ export default function Wishlist() {
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Saved',      value: wishlist.length },
-            { label: 'Avg Match',  value: Math.round(wishlist.reduce((a, b) => a + b.match, 0) / wishlist.length) + '%' },
-            { label: 'Avg Rating', value: (wishlist.reduce((a, b) => a + b.rating, 0) / wishlist.length).toFixed(1) },
+            { label: 'Avg Match',  value: Math.round(wishlist.reduce((a, b) => a + (b.match_score || 0), 0) / wishlist.length) + '%' },
+            { label: 'Avg Rating', value: (wishlist.reduce((a, b) => a + parseFloat(b.rating || 0), 0) / wishlist.length).toFixed(1) },
           ].map(s => (
             <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-5 text-center shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
               <p className="text-2xl md:text-3xl font-black text-blue-600">{s.value}</p>
@@ -141,7 +149,7 @@ export default function Wishlist() {
           <p className="text-slate-400 text-sm mb-6 max-w-xs leading-relaxed">
             Browse destinations on the Explore page and tap the heart icon to save them here.
           </p>
-          <a href="/explore"
+          <a href="/dashboard/explore"
             className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-200">
             Explore Destinations <FaArrowRight className="text-xs" />
           </a>

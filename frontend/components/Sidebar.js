@@ -4,6 +4,7 @@ import {
   FaPlane, FaCompass, FaMapMarkerAlt, FaHeart, FaCalendarAlt,
   FaCog, FaBars, FaTimes, FaSignOutAlt, FaUserCircle
 } from 'react-icons/fa';
+import { useUser } from './useUser';
 
 const navItems = [
   { icon: <FaCompass />, label: 'Dashboard', href: '/dashboard' },
@@ -15,11 +16,11 @@ const navItems = [
 
 export default function Sidebar({ active = 'Dashboard' }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { fullName, initials } = useUser();
 
-  const handleLogout = () => {
-    // Keycloak logout:
-    // window.location.href = `${process.env.NEXT_PUBLIC_KEYCLOAK_URL}/realms/tourism-platform/protocol/openid-connect/logout?redirect_uri=${window.location.origin}`;
-    console.log('Keycloak logout triggered');
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/login';
   };
 
   return (
@@ -104,9 +105,11 @@ export default function Sidebar({ active = 'Dashboard' }) {
         {/* Bottom */}
         <div className="px-3 pb-5 pt-4 border-t border-white/[0.06] flex flex-col gap-2">
           <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.04] rounded-xl">
-            <FaUserCircle className="text-slate-400 text-2xl flex-shrink-0" />
+            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-black">{initials}</span>
+            </div>
             <div className="overflow-hidden leading-tight">
-              <p className="text-white text-sm font-bold truncate">Kago Phuthego</p>
+              <p className="text-white text-sm font-bold truncate">{fullName}</p>
               <p className="text-slate-500 text-[10px] truncate">Tourist · Silver</p>
             </div>
           </div>

@@ -72,7 +72,7 @@ const ALL_DESTINATIONS = [
     price: 2600, priceLabel: 'P 2,600', rating: 4.5, reviews: 121,
     category: 'Safari', match: 79,
     tag: 'Value', tagColor: 'bg-emerald-50 text-emerald-600',
-    photo: '/images/destinations/nxai-pan.jpg',
+    photo: '/images/destinations/nxai_pan.jpg',
     gradient: 'from-green-100 to-emerald-50',
     desc: "Ancient fossil pan home to the iconic Baines' Baobabs. Witness the zebra migration corridor and predator action up close.",
     features: ['Baobabs', 'Zebras', 'Stargazing', 'Family'],
