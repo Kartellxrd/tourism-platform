@@ -3,21 +3,21 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { FaUser, FaLock, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
+import {
+  FaEnvelope, FaLock, FaCheckCircle,
+  FaExclamationCircle, FaEye, FaEyeSlash, FaPlane
+} from 'react-icons/fa';
 
 function LoginContent() {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const [success, setSuccess]   = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
-  // 1. Auto-fill email and show success message if coming from Register
+  // Auto-fill email if coming from register
   useEffect(() => {
     const emailParam = searchParams.get('email');
     if (emailParam) {
@@ -41,98 +41,168 @@ function LoginContent() {
 
       if (res.ok) {
         setSuccess(true);
-        // Delay redirect slightly so user sees the success message
-        setTimeout(() => router.push('/dashboard'), 1500);
+        const redirect = searchParams.get('redirect') || '/dashboard';
+        setTimeout(() => router.push(redirect), 1500);
       } else {
-        setError(data.message || "Identity verification failed.");
+        setError(data.message || "Invalid credentials.");
       }
-    } catch (err) {
-      setError("Critical Error: Connection to PulaPath-ID lost.");
+    } catch {
+      setError("Connection error. Is the server running?");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative w-full max-w-[450px] bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-7 md:p-10 shadow-2xl overflow-hidden">
-      
-      {/* Registration Success Banner */}
-      {searchParams.get('registered') && !error && !success && (
-        <div className="mb-6 p-3 bg-green-500/20 border border-green-500/50 rounded-xl flex items-center gap-3 animate-bounce">
-          <FaCheckCircle className="text-green-500" />
-          <p className="text-xs font-bold text-green-200">Registration Verified. Welcome!</p>
-        </div>
-      )}
+    <div className="w-full max-w-md">
 
-      {/* Login Success Banner */}
-      {success && (
-        <div className="mb-6 p-3 bg-blue-500/20 border border-blue-500/50 rounded-xl flex items-center gap-3 animate-pulse">
-          <FaCheckCircle className="text-blue-400" />
-          <p className="text-xs font-bold text-blue-200">Identity Confirmed. Accessing Dashboard...</p>
-        </div>
-      )}
+      {/* Card */}
+      <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
 
-      {/* Error Banner */}
-      {error && (
-        <div className="mb-6 p-3 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3">
-          <FaExclamationCircle className="text-red-500" />
-          <p className="text-xs font-bold text-red-200">{error}</p>
-        </div>
-      )}
+        {/* Top accent */}
+        <div className="h-1.5 bg-gradient-to-r from-blue-500 via-blue-600 to-emerald-500" />
 
-      <div className="flex flex-col items-center mb-8 relative z-10">
-        <Image src="/PulaPathLogo-removebg-preview.png" alt="Logo" width={65} height={65} className="rounded-2xl" />
-        <h1 className="text-3xl font-black tracking-[0.1em] text-white uppercase mt-4">Sign In</h1>
-        <div className="h-1.5 w-16 bg-blue-600 rounded-full mt-2"></div>
+        <div className="p-8">
+
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 mb-4">
+              <FaPlane className="text-white text-xl rotate-45" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Welcome back</h1>
+            <p className="text-slate-400 text-sm mt-1">Sign in to your Pula Tourism account</p>
+          </div>
+
+          {/* Success banner */}
+          {searchParams.get('registered') && !error && !success && (
+            <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
+              <FaCheckCircle className="text-emerald-500 flex-shrink-0" />
+              <p className="text-emerald-700 text-sm font-bold">Account created! Please sign in.</p>
+            </div>
+          )}
+
+          {/* Login success */}
+          {success && (
+            <div className="mb-5 p-3.5 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3 animate-pulse">
+              <FaCheckCircle className="text-blue-500 flex-shrink-0" />
+              <p className="text-blue-700 text-sm font-bold">Signed in! Redirecting to dashboard...</p>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {error && (
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3">
+              <FaExclamationCircle className="text-red-500 flex-shrink-0" />
+              <p className="text-red-600 text-sm font-bold">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSignIn} className="space-y-4">
+
+            {/* Email */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-sm" />
+                <input
+                  required
+                  type="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 text-slate-800 text-sm outline-none focus:bg-white focus:border-blue-300 focus:shadow-sm transition-all placeholder:text-slate-300"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Password
+                </label>
+                <button type="button" className="text-[10px] text-blue-500 font-bold hover:underline">
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative">
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-sm" />
+                <input
+                  required
+                  type={showPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-12 text-slate-800 text-sm outline-none focus:bg-white focus:border-blue-300 focus:shadow-sm transition-all placeholder:text-slate-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                >
+                  {showPass ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading || success}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black py-3.5 rounded-2xl transition-all text-sm shadow-lg shadow-blue-200 hover:-translate-y-0.5 active:translate-y-0 mt-2"
+            >
+              {loading ? "Signing in..." : success ? "Redirecting..." : "Sign In"}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-slate-300 text-xs font-bold">OR</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
+          {/* Register link */}
+          <p className="text-center text-slate-500 text-sm">
+            Don't have an account?{' '}
+            <Link href="/register" className="text-blue-600 font-black hover:underline">
+              Create one free →
+            </Link>
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={handleSignIn} className="space-y-5 relative z-10">
-        <div className="relative group">
-          <FaUser className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 z-20" />
-          <input 
-            required
-            type="email" 
-            placeholder="Email Address" 
-            value={formData.email}
-            onChange={(e) => setFormData({...formData, email: e.target.value})}
-            className="w-full bg-white/90 rounded-2xl py-4 pl-14 pr-6 text-slate-900 font-bold outline-none"
-          />
-        </div>
-
-        <div className="relative group">
-          <FaLock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 z-20" />
-          <input 
-            required
-            type="password" 
-            placeholder="Password" 
-            value={formData.password}
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
-            className="w-full bg-white/90 rounded-2xl py-4 pl-14 pr-6 text-slate-900 font-bold outline-none"
-          />
-        </div>
-
-        <button 
-          disabled={loading || success}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest disabled:bg-slate-600"
-        >
-          {loading ? "Authenticating..." : success ? "Redirecting..." : "Sign In"}
-        </button>
-
-        <p className="text-center text-slate-400 text-sm">
-          New to PulaPath? <Link href="/register" className="text-blue-400 font-bold underline">Create Account</Link>
+      {/* Security badge */}
+      <div className="flex items-center justify-center gap-2 mt-5">
+        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+        <p className="text-slate-400 text-[10px] font-bold">
+          Secured by Keycloak OAuth 2.0 / OpenID Connect
         </p>
-      </form>
+      </div>
     </div>
   );
 }
 
 export default function Login() {
   return (
-    <main className="min-h-screen bg-[#0f172a] flex items-center justify-center font-sans text-white bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-blue-950 to-[#0f172a]">
-     
-      <Suspense fallback={<div className="text-white">Connecting to Pula-Cloud...</div>}>
-        <LoginContent />
-      </Suspense>
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+
+      {/* Background blobs */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-md">
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <LoginContent />
+        </Suspense>
+      </div>
     </main>
   );
 }

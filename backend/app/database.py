@@ -9,7 +9,7 @@ import os
 # Update MYSQL_PASSWORD to match your MySQL Workbench root password
 
 MYSQL_USER     = os.getenv("MYSQL_USER",     "root")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "admin123")   # <-- change this
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "password123")   # <-- change this
 MYSQL_HOST     = os.getenv("MYSQL_HOST",     "localhost")
 MYSQL_PORT     = os.getenv("MYSQL_PORT",     "3306")
 MYSQL_DB       = os.getenv("MYSQL_DB",       "botswana_tourism")

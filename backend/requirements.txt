@@ -5,3 +5,6 @@ pymysql
 python-jose[cryptography]
 httpx
 pydantic
+scikit-learn
+numpy
+stripe

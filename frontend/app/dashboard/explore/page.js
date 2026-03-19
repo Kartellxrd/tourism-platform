@@ -1,101 +1,50 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   FaMapMarkerAlt, FaStar, FaRobot, FaSearch, FaFilter,
   FaHeart, FaTimes, FaChevronDown, FaBolt, FaArrowRight, FaCheck
 } from 'react-icons/fa';
 import { useWishlist } from '../../../components/WishListContext';
-const ALL_DESTINATIONS = [
-  {
-    id: 1,
-    name: 'Okavango Delta', location: 'Maun', region: 'North-West',
-    price: 4500, priceLabel: 'P 4,500', rating: 4.9, reviews: 312,
-    category: 'Safari', match: 97,
-    tag: 'Top Pick', tagColor: 'bg-blue-50 text-blue-600',
-    photo: '/images/destinations/okavango-delta.jpg',
-    gradient: 'from-blue-100 to-cyan-50',
-    desc: "UNESCO World Heritage Site. Explore the world's largest inland delta by mokoro canoe through pristine waterways teeming with wildlife.",
-    features: ['Wildlife', 'Photography', 'Mokoro', 'Luxury'],
-    aiReason: 'Matches your wildlife photography preference',
-  },
-  {
-    id: 2,
-    name: 'Chobe National Park', location: 'Kasane', region: 'North',
-    price: 5100, priceLabel: 'P 5,100', rating: 4.8, reviews: 287,
-    category: 'Game Reserve', match: 93,
-    tag: 'Trending', tagColor: 'bg-rose-50 text-rose-600',
-    photo: '/images/destinations/chobe.jpg',
-    gradient: 'from-emerald-100 to-green-50',
-    desc: "Home to Africa's densest elephant population. Epic river cruises at golden hour with hundreds of elephants crossing.",
-    features: ['Elephants', 'River Cruise', 'Big 5', 'Birding'],
-    aiReason: 'Popular with users who share your booking history',
-  },
-  {
-    id: 3,
-    name: 'Makgadikgadi Pans', location: 'Nata', region: 'North-East',
-    price: 3200, priceLabel: 'P 3,200', rating: 4.7, reviews: 198,
-    category: 'Landscape', match: 88,
-    tag: 'Hidden Gem', tagColor: 'bg-amber-50 text-amber-600',
-    photo: '/images/destinations/makgadikgadi.jpg',
-    gradient: 'from-amber-100 to-yellow-50',
-    desc: 'Vast salt flats stretching to the horizon. During rainy season thousands of flamingos transform the landscape into a sea of pink.',
-    features: ['Flamingos', 'Stargazing', 'Landscape', 'Quad Biking'],
-    aiReason: 'Aligns with your interest in open landscapes',
-  },
-  {
-    id: 4,
-    name: 'Central Kalahari', location: 'Ghanzi', region: 'Central',
-    price: 2900, priceLabel: 'P 2,900', rating: 4.6, reviews: 154,
-    category: 'Desert', match: 82,
-    tag: 'Adventure', tagColor: 'bg-orange-50 text-orange-600',
-    photo: '/images/destinations/kalahari.jpg',
-    gradient: 'from-orange-100 to-amber-50',
-    desc: "One of the world's largest game reserves. Authentic Bushmen cultural experiences in the ancient red sands of the Kalahari.",
-    features: ['Culture', 'Desert', 'Lions', 'Camping'],
-    aiReason: 'Recommended for adventure seekers',
-  },
-  {
-    id: 5,
-    name: 'Moremi Game Reserve', location: 'Moremi', region: 'North-West',
-    price: 4800, priceLabel: 'P 4,800', rating: 4.8, reviews: 243,
-    category: 'Game Reserve', match: 91,
-    tag: 'Premium', tagColor: 'bg-purple-50 text-purple-600',
-    photo: '/images/destinations/moremi.jpg',
-    gradient: 'from-purple-100 to-violet-50',
-    desc: 'Where the Okavango meets the Kalahari. Year-round Big Five sightings in the most biodiverse corner of Botswana.',
-    features: ['Big Five', 'Birding', 'Photography', 'Luxury'],
-    aiReason: 'Highly rated by users with similar preferences',
-  },
-  {
-    id: 6,
-    name: 'Nxai Pan', location: 'Maun', region: 'North-West',
-    price: 2600, priceLabel: 'P 2,600', rating: 4.5, reviews: 121,
-    category: 'Safari', match: 79,
-    tag: 'Value', tagColor: 'bg-emerald-50 text-emerald-600',
-    photo: '/images/destinations/nxai_pan.jpg',
-    gradient: 'from-green-100 to-emerald-50',
-    desc: "Ancient fossil pan home to the iconic Baines' Baobabs. Witness the zebra migration corridor and predator action up close.",
-    features: ['Baobabs', 'Zebras', 'Stargazing', 'Family'],
-    aiReason: 'Great value option matching your budget range',
-  },
-];
+import BookingModal from '../../../components/BookingModal';
+import { ALL_DESTINATIONS, CATEGORIES, REGIONS, SORT_OPTIONS } from '../../../components/destinations';
+import Link from 'next/link';
 
-const CATEGORIES   = ['All', 'Safari', 'Game Reserve', 'Landscape', 'Desert'];
-const REGIONS      = ['All Regions', 'North-West', 'North', 'North-East', 'Central'];
-const SORT_OPTIONS = ['Best Match', 'Highest Rated', 'Price: Low to High', 'Price: High to Low'];
+const FASTAPI = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
 
 // ─── Card ────────────────────────────────────────────────────────────────────
-function DestCard({ d }) {
+function DestCard({ d, aiScore, onBook }) {
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   const [imgError, setImgError] = useState(false);
   const saved = isWishlisted(d.id);
+  const matchScore = aiScore !== undefined ? aiScore : d.match;
 
   const handleWishlist = () => {
-    if (saved) {
-      removeFromWishlist(d.id);
-    } else {
-      addToWishlist(d);
-    }
+    if (saved) removeFromWishlist(d.id);
+    else addToWishlist(d);
+  };
+
+  const logInteraction = async (action) => {
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(r => r.startsWith('auth_token='))
+        ?.split('=')[1];
+      if (!token) return;
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/interactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dest_id: d.id, action }),
+      });
+    } catch (_) {}
+  };
+
+  const handleWishlistWithLog = () => {
+    handleWishlist();
+    logInteraction(saved ? 'ignore' : 'wishlist');
   };
 
   return (
@@ -116,24 +65,18 @@ function DestCard({ d }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
-        {/* Tag */}
         <div className="absolute top-3 left-3">
           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${d.tagColor}`}>{d.tag}</span>
         </div>
 
-        {/* Wishlist button — changes on save */}
         <button
-          onClick={handleWishlist}
+          onClick={handleWishlistWithLog}
           className={`absolute top-3 right-3 w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm backdrop-blur-sm
-            ${saved
-              ? 'bg-rose-500 text-white scale-110'
-              : 'bg-white/80 text-slate-400 hover:text-rose-500 hover:bg-white'
-            }`}
+            ${saved ? 'bg-rose-500 text-white scale-110' : 'bg-white/80 text-slate-400 hover:text-rose-500 hover:bg-white'}`}
         >
           {saved ? <FaCheck className="text-xs" /> : <FaHeart className="text-xs" />}
         </button>
 
-        {/* Rating */}
         <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-black flex items-center gap-1 shadow-sm">
           <FaStar className="text-yellow-400" /> {d.rating}
           <span className="text-slate-400 font-medium">({d.reviews})</span>
@@ -151,59 +94,100 @@ function DestCard({ d }) {
           </div>
           <div className="text-right flex-shrink-0 ml-2">
             <span className="text-blue-600 font-black text-base">{d.priceLabel}</span>
-            <p className="text-slate-400 text-[9px]">per person</p>
+            <p className="text-slate-400 text-[9px]">per person / night</p>
           </div>
         </div>
 
         <p className="text-slate-500 text-xs leading-relaxed mb-3 flex-1">{d.desc}</p>
 
-        {/* Feature pills */}
         <div className="flex flex-wrap gap-1.5 mb-3">
           {d.features.map(f => (
             <span key={f} className="bg-slate-50 border border-slate-100 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full">{f}</span>
           ))}
         </div>
 
-        {/* AI match */}
         <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 mb-4">
           <div className="flex items-center gap-2">
             <FaRobot className="text-blue-400 text-[10px] flex-shrink-0" />
             <p className="text-slate-500 text-[10px] italic flex-1 truncate">{d.aiReason}</p>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <div className="w-10 h-1 bg-blue-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${d.match}%` }} />
+                <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${matchScore}%` }} />
               </div>
-              <span className="text-[10px] font-black text-blue-600">{d.match}%</span>
+              <span className="text-[10px] font-black text-blue-600">{matchScore}%</span>
             </div>
           </div>
         </div>
 
-        {/* Wishlist feedback strip */}
         {saved && (
           <div className="flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mb-3">
             <FaHeart className="text-rose-400 text-xs flex-shrink-0" />
             <p className="text-rose-500 text-[10px] font-bold">Added to your Wishlist</p>
-            <a href="/wishlist" className="ml-auto text-rose-400 text-[10px] font-black hover:underline">View →</a>
+            <Link href="/dashboard/wishlist" className="ml-auto text-rose-400 text-[10px] font-black hover:underline">View →</Link>
           </div>
         )}
 
-        <button className="w-full bg-slate-50 group-hover:bg-blue-600 text-slate-500 group-hover:text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+        {/* Book Now — calls parent onBook */}
+        <button
+          onClick={() => onBook(d)}
+          className="w-full bg-slate-50 group-hover:bg-blue-600 text-slate-500 group-hover:text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+        >
           Book Now <FaArrowRight className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
     </div>
   );
 }
-
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function Explore() {
   const { wishlist } = useWishlist();
-  const [search, setSearch]       = useState('');
-  const [category, setCategory]   = useState('All');
-  const [region, setRegion]       = useState('All Regions');
-  const [sort, setSort]           = useState('Best Match');
-  const [maxPrice, setMaxPrice]   = useState(6000);
+  const [search, setSearch]           = useState('');
+  const [category, setCategory]       = useState('All');
+  const [region, setRegion]           = useState('All Regions');
+  const [sort, setSort]               = useState('Best Match');
+  const [maxPrice, setMaxPrice]       = useState(6000);
   const [showFilters, setShowFilters] = useState(false);
+  const [bookingDest, setBookingDest] = useState(null);
+
+  // AI scores from backend — map of dest_id → match_score
+  const [aiScores, setAiScores]   = useState({});
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // Fetch AI recommendations on mount
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      setAiLoading(true);
+      try {
+        const token = document.cookie
+          .split('; ')
+          .find(r => r.startsWith('auth_token='))
+          ?.split('=')[1];
+
+        if (!token) return;
+
+        const res = await fetch(`${FASTAPI}/recommendations`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Convert array to map: { 1: 97, 2: 93, ... }
+          const scoreMap = {};
+          data.recommendations.forEach(r => {
+            scoreMap[r.dest_id] = r.match_score;
+          });
+          setAiScores(scoreMap);
+        }
+      } catch (_) {
+        // Silently fall back to hardcoded scores
+      } finally {
+        setAiLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, []);
 
   const filtered = useMemo(() => {
     let list = ALL_DESTINATIONS.filter(d => {
@@ -218,10 +202,15 @@ export default function Explore() {
     if (sort === 'Highest Rated')           list = [...list].sort((a, b) => b.rating - a.rating);
     else if (sort === 'Price: Low to High') list = [...list].sort((a, b) => a.price - b.price);
     else if (sort === 'Price: High to Low') list = [...list].sort((a, b) => b.price - a.price);
-    else                                    list = [...list].sort((a, b) => b.match - a.match);
+    else list = [...list].sort((a, b) => {
+      // Sort by AI score if available, otherwise hardcoded match
+      const scoreA = aiScores[a.id] !== undefined ? aiScores[a.id] : a.match;
+      const scoreB = aiScores[b.id] !== undefined ? aiScores[b.id] : b.match;
+      return scoreB - scoreA;
+    });
 
     return list;
-  }, [search, category, region, sort, maxPrice]);
+  }, [search, category, region, sort, maxPrice, aiScores]);
 
   return (
     <div className="px-5 md:px-8 py-8 max-w-[1400px] mx-auto">
@@ -232,7 +221,10 @@ export default function Explore() {
         <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 mb-1">
           Explore <span className="text-blue-600">Botswana</span>
         </h1>
-        <p className="text-slate-400 text-sm">Ranked by your personalised AI preference score</p>
+        <p className="text-slate-400 text-sm">
+          Ranked by your personalised AI preference score ·{' '}
+          <span className="font-bold text-slate-600">{ALL_DESTINATIONS.length} destinations</span>
+        </p>
       </header>
 
       {/* Search + sort + filter bar */}
@@ -295,10 +287,10 @@ export default function Explore() {
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
                 Max Price: <span className="text-blue-600">P {maxPrice.toLocaleString()}</span>
               </p>
-              <input type="range" min={2000} max={6000} step={100} value={maxPrice}
+              <input type="range" min={600} max={6000} step={100} value={maxPrice}
                 onChange={e => setMaxPrice(Number(e.target.value))} className="w-full accent-blue-600" />
               <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                <span>P 2,000</span><span>P 6,000</span>
+                <span>P 600</span><span>P 6,000</span>
               </div>
             </div>
           </div>
@@ -323,15 +315,23 @@ export default function Explore() {
           </div>
           <div>
             <p className="text-white font-black text-sm">Destinations ranked by your AI match score</p>
-            <p className="text-slate-500 text-[11px]">Cosine similarity · Scikit-learn · Updates with every interaction</p>
+            <p className="text-slate-500 text-[11px]">
+              Cosine similarity · Scikit-learn ·{' '}
+              {aiLoading
+                ? <span className="text-blue-400 animate-pulse">Calculating scores...</span>
+                : Object.keys(aiScores).length > 0
+                  ? <span className="text-emerald-400">Scores personalised ✓</span>
+                  : 'Set preferences in Settings to personalise'
+              }
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {wishlist.length > 0 && (
-            <a href="/wishlist" className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-full hover:bg-rose-500/20 transition-colors">
+            <Link href="/dashboard/wishlist" className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-full hover:bg-rose-500/20 transition-colors">
               <FaHeart className="text-rose-400 text-[10px]" />
               <span className="text-rose-400 text-[10px] font-black">{wishlist.length} saved</span>
-            </a>
+            </Link>
           )}
           <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
             <FaBolt className="text-emerald-400 text-[10px]" />
@@ -346,12 +346,25 @@ export default function Explore() {
           <span className="font-black text-slate-800">{filtered.length}</span> destinations
           {search && <span> matching "<span className="text-blue-600 font-semibold">{search}</span>"</span>}
         </p>
+        {filtered.length !== ALL_DESTINATIONS.length && (
+          <button onClick={() => { setSearch(''); setCategory('All'); setRegion('All Regions'); setMaxPrice(6000); }}
+            className="text-xs text-blue-600 font-bold hover:underline">
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
-          {filtered.map(d => <DestCard key={d.id} d={d} />)}
+          {filtered.map(d => (
+            <DestCard
+              key={d.id}
+              d={d}
+              aiScore={aiScores[d.id]}
+              onBook={(dest) => setBookingDest(dest)}
+            />
+          ))}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -366,6 +379,13 @@ export default function Explore() {
           </button>
         </div>
       )}
+      {/* Single modal instance — outside the grid, no lag */}
+       {bookingDest && (
+       <BookingModal
+        destination={bookingDest}
+        onClose={() => setBookingDest(null)}
+  />
+)}
 
       {/* Map CTA */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-5 shadow-sm">
@@ -375,12 +395,17 @@ export default function Explore() {
           </div>
           <div>
             <h3 className="font-black text-slate-800 tracking-tight">View All on Google Maps</h3>
-            <p className="text-slate-400 text-sm mt-0.5">Interactive map with routes, distances & nearby attractions</p>
+            <p className="text-slate-400 text-sm mt-0.5">
+              Interactive map · {ALL_DESTINATIONS.length} destinations · Enable location for nearby attractions
+            </p>
           </div>
         </div>
-        <button className="flex-shrink-0 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl text-sm transition-all shadow-md shadow-emerald-200 flex items-center gap-2">
+        <Link
+          href="/dashboard/map"
+          className="flex-shrink-0 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl text-sm transition-all shadow-md shadow-emerald-200 flex items-center gap-2"
+        >
           <FaMapMarkerAlt className="text-xs" /> Open Map View
-        </button>
+        </Link>
       </div>
     </div>
   );

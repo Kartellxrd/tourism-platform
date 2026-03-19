@@ -1,11 +1,13 @@
 'use client';
+import { useState } from 'react';
 import {
   FaHeart, FaMapMarkerAlt, FaStar, FaRobot,
   FaTrash, FaArrowRight
 } from 'react-icons/fa';
 import { useWishlist } from '../../../components/WishListContext';
+import BookingModal from '../../../components/BookingModal';
 
-function WishlistCard({ item, onRemove }) {
+function WishlistCard({ item, onRemove, onBook }) {
   return (
     <div className="group bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
 
@@ -25,7 +27,6 @@ function WishlistCard({ item, onRemove }) {
           </span>
         </div>
 
-        {/* Remove — uses destination_id */}
         <button onClick={() => onRemove(item.destination_id)}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all shadow-sm">
           <FaTrash className="text-xs" />
@@ -52,7 +53,6 @@ function WishlistCard({ item, onRemove }) {
           </div>
         </div>
 
-        {/* description — DB field name */}
         <p className="text-slate-500 text-xs leading-relaxed mb-3 flex-1">{item.description}</p>
 
         {/* Feature pills */}
@@ -62,7 +62,7 @@ function WishlistCard({ item, onRemove }) {
           ))}
         </div>
 
-        {/* AI match — uses match_score and ai_reason from DB */}
+        {/* AI match */}
         <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 mb-3">
           <div className="flex items-center gap-2">
             <FaRobot className="text-blue-400 text-[10px] flex-shrink-0" />
@@ -82,7 +82,10 @@ function WishlistCard({ item, onRemove }) {
           </p>
         )}
 
-        <button className="w-full bg-slate-50 group-hover:bg-blue-600 text-slate-500 group-hover:text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+        <button
+          onClick={() => onBook(item)}
+          className="w-full bg-slate-50 group-hover:bg-blue-600 text-slate-500 group-hover:text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+        >
           Book Now <FaArrowRight className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
@@ -92,6 +95,23 @@ function WishlistCard({ item, onRemove }) {
 
 export default function Wishlist() {
   const { wishlist, loading, removeFromWishlist } = useWishlist();
+  const [bookingDest, setBookingDest] = useState(null);
+
+  // Convert wishlist item to destination format BookingModal expects
+  const handleBook = (item) => {
+    setBookingDest({
+      id:        item.destination_id,
+      name:      item.name,
+      location:  item.location,
+      photo:     item.photo,
+      gradient:  item.gradient || 'from-blue-100 to-cyan-50',
+      rating:    item.rating,
+      price:     item.price,
+      priceLabel: item.price_label,
+      tag:       item.tag,
+      tagColor:  item.tag_color,
+    });
+  };
 
   if (loading) {
     return (
@@ -137,7 +157,12 @@ export default function Wishlist() {
       {wishlist.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
           {wishlist.map(item => (
-            <WishlistCard key={item.id} item={item} onRemove={removeFromWishlist} />
+            <WishlistCard
+              key={item.id}
+              item={item}
+              onRemove={removeFromWishlist}
+              onBook={handleBook}
+            />
           ))}
         </div>
       ) : (
@@ -154,6 +179,14 @@ export default function Wishlist() {
             Explore Destinations <FaArrowRight className="text-xs" />
           </a>
         </div>
+      )}
+
+      {/* Booking modal — single instance outside cards */}
+      {bookingDest && (
+        <BookingModal
+          destination={bookingDest}
+          onClose={() => setBookingDest(null)}
+        />
       )}
     </div>
   );

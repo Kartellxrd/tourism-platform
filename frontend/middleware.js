@@ -1,30 +1,34 @@
-// frontend/middleware.js
-
 import { NextResponse } from 'next/server';
 
+// Routes that require authentication
+const PROTECTED_ROUTES = ['/dashboard'];
+
+// Routes that should redirect to dashboard if already logged in
+const AUTH_ROUTES = ['/login', '/register'];
+
 export function middleware(request) {
-  const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('auth_token')?.value;
 
-  // Skip all API routes — never block /api/wishlist, /api/login etc.
-  if (pathname.startsWith('/api')) {
-    return NextResponse.next();
-  }
+  // Check if route is protected
+  const isProtected = PROTECTED_ROUTES.some(route =>
+    pathname.startsWith(route)
+  );
 
-  const isProtectedRoute =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/ai-planner') ||
-    pathname.startsWith('/settings');
+  // Check if route is auth page
+  const isAuthRoute = AUTH_ROUTES.some(route =>
+    pathname.startsWith(route)
+  );
 
-  // Not logged in + trying to access protected route → send to login
-  if (isProtectedRoute && !token) {
+  // No token + trying to access dashboard → redirect to login
+  if (isProtected && !token) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('from', pathname);
+    loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Already logged in + trying to visit login or register → send to dashboard
-  if ((pathname === '/login' || pathname === '/register') && token) {
+  // Has token + trying to access login/register → redirect to dashboard
+  if (isAuthRoute && token) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -34,8 +38,6 @@ export function middleware(request) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/ai-planner/:path*',
-    '/settings/:path*',
     '/login',
     '/register',
   ],

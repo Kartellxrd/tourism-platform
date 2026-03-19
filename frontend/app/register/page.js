@@ -1,200 +1,351 @@
 'use client';
 import { useState } from "react";
-import Navbar from "../../components/Navbar";
-import Image from "next/image";
-import Link from "next/link";
-import { FaUser, FaUserCircle, FaEnvelope, FaLock, FaCheckCircle, FaExclamationCircle, FaRocket } from 'react-icons/fa';
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  FaUser, FaEnvelope, FaLock, FaCheckCircle,
+  FaExclamationCircle, FaEye, FaEyeSlash,
+  FaPlane, FaRocket
+} from 'react-icons/fa';
+
+const FEATURES =  [
+  'AI-powered destination matching',
+  'Interactive Google Maps',
+  'Personalised safari recommendations',
+  'Pula AI assistant 24/7',
+];
+
+const getPasswordChecks = (pass) => [
+  { label: 'At least 8 characters',      done: pass.length >= 8 },
+  { label: 'One uppercase letter',        done: /[A-Z]/.test(pass) },
+  { label: 'One number',                  done: /[0-9]/.test(pass) },
+  { label: 'One special character',       done: /[^A-Za-z0-9]/.test(pass) },
+];
+
+const getStrength = (pass) => {
+  if (!pass) return -1;
+  return getPasswordChecks(pass).filter(c => c.done).length - 1;
+};
+
+const STRENGTH_CONFIG = [
+  { label: 'Weak',   color: 'bg-red-500',    width: '25%' },
+  { label: 'Fair',   color: 'bg-orange-400', width: '50%' },
+  { label: 'Good',   color: 'bg-yellow-400', width: '75%' },
+  { label: 'Strong', color: 'bg-emerald-500', width: '100%' },
+];
 
 export default function Register() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ firstName: "", lastName: "", email: "", password: "" });
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
-  const [success, setSuccess]   = useState(false);
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const getStrength = (pass) => {
-    let score = 0;
-    if (pass.length === 0) return -1;
-    if (pass.length > 7) score++;
-    if (/[A-Z]/.test(pass)) score++;
-    if (/[0-9]/.test(pass)) score++;
-    if (/[^A-Za-z0-9]/.test(pass)) score++;
-    return score;
-  };
+  const [formData, setFormData] = useState({
+    firstName: '', lastName: '', email: '', password: ''
+  });
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
+  const [success, setSuccess]       = useState(false);
+  const [showPass, setShowPass]     = useState(false);
+  const [passtouched, setPassTouched] = useState(false);
 
   const strengthScore = getStrength(formData.password);
-  const strengthConfig = [
-    { label: "Very Weak",            color: "bg-red-600",    width: "25%"  },
-    { label: "Weak",                 color: "bg-orange-500", width: "50%"  },
-    { label: "Good",                 color: "bg-yellow-500", width: "75%"  },
-    { label: "Strong (Pula-Secure)", color: "bg-green-500",  width: "100%" },
-  ];
+  const checks        = getPasswordChecks(formData.password);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (e.target.name === 'password') setPassTouched(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (strengthScore < 2) { setError("Please choose a stronger password."); return; }
+    if (strengthScore < 1) {
+      setError('Please choose a stronger password.');
+      return;
+    }
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
+      const data = await res.json();
 
-      if (response.ok) {
+      if (res.ok) {
         setSuccess(true);
         setTimeout(() => {
           router.push(`/login?registered=true&email=${encodeURIComponent(formData.email)}`);
         }, 2500);
       } else {
-        setError(data.message || "Registration failed. Please try again.");
+        setError(data.message || 'Registration failed. Please try again.');
       }
     } catch {
-      setError("Could not connect to the server. Is Docker running?");
+      setError('Connection error. Is the server running?');
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Success screen — shown after successful registration ──────────────────
-  if (success) {
-    return (
-      <main className="min-h-screen bg-[#0f172a] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-blue-950 to-[#0f172a] font-sans text-white flex items-center justify-center px-4">
-        <div className="relative w-full max-w-[420px] bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl text-center overflow-hidden">
-          {/* Glow */}
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-green-500/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl" />
-
-          {/* Icon */}
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="w-20 h-20 bg-green-500/20 border border-green-500/30 rounded-3xl flex items-center justify-center mb-5 animate-bounce">
-              <FaCheckCircle className="text-green-400 text-3xl" />
-            </div>
-
-            <h2 className="text-2xl font-black tracking-tight text-white mb-2">
-              Welcome to PulaPath,<br />
-              <span className="text-green-400">{formData.firstName} {formData.lastName}!</span>
-            </h2>
-
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Your account has been successfully created and verified in the PulaPath system. You're ready to explore Botswana.
-            </p>
-
-            {/* Account summary card */}
-            <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-bold uppercase tracking-wider">Name</span>
-                <span className="text-white font-black">{formData.firstName} {formData.lastName}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-bold uppercase tracking-wider">Email</span>
-                <span className="text-blue-400 font-bold">{formData.email}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-bold uppercase tracking-wider">Status</span>
-                <span className="text-green-400 font-black flex items-center gap-1">
-                  <FaCheckCircle className="text-[10px]" /> Verified
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-400 font-bold uppercase tracking-wider">Role</span>
-                <span className="text-white font-bold">Tourist</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-slate-500 text-xs animate-pulse">
-              <FaRocket className="text-blue-400" />
-              Redirecting to login...
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // ── Registration form ─────────────────────────────────────────────────────
+ if (success) {
   return (
-    <main className="min-h-screen bg-[#0f172a] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-blue-950 to-[#0f172a] font-sans text-white">
-      <Navbar />
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-10 max-w-md w-full text-center">
+        <div className="h-1.5 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full mb-8" />
 
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] py-8 md:py-12 px-4">
-        <div className="relative w-full max-w-[480px] bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl overflow-hidden">
-          <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl" />
+        {/* Email icon */}
+        <div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-5">
+          <FaEnvelope className="text-blue-500 text-2xl" />
+        </div>
 
-          {/* Error banner */}
-          {error && (
-            <div className="mb-6 p-3 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3">
-              <FaExclamationCircle className="text-red-400 flex-shrink-0" />
-              <p className="text-xs font-bold text-red-200">{error}</p>
+        <h2 className="font-black text-slate-800 text-xl mb-2">
+          Check your email!
+        </h2>
+        <p className="text-slate-400 text-sm mb-2">
+          We sent a verification link to:
+        </p>
+        <p className="text-blue-600 font-black text-sm mb-6 bg-blue-50 border border-blue-100 rounded-xl py-2 px-4 inline-block">
+          {formData.email}
+        </p>
+        <p className="text-slate-400 text-xs mb-6 leading-relaxed">
+          Click the link in the email to verify your account before logging in. Check your spam folder if you don't see it.
+        </p>
+
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-left space-y-2">
+          {[
+            { label: 'Name',   value: `${formData.firstName} ${formData.lastName}` },
+            { label: 'Email',  value: formData.email },
+            { label: 'Status', value: '⏳ Pending verification' },
+          ].map(r => (
+            <div key={r.label} className="flex justify-between text-xs">
+              <span className="text-slate-400 font-bold uppercase tracking-wider">{r.label}</span>
+              <span className="text-slate-700 font-black">{r.value}</span>
             </div>
-          )}
+          ))}
+        </div>
 
-          <div className="flex flex-col items-center mb-6 md:mb-8 relative z-10">
-            <div className="relative p-1 rounded-2xl bg-gradient-to-br from-blue-500/20 to-transparent mb-4">
-              <Image src="/PulaPathLogo-removebg-preview.png" alt="PulaPath Logo" width={75} height={75} className="rounded-2xl shadow-2xl" />
+        <Link
+          href="/login"
+          className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl text-sm transition-all"
+        >
+          Go to Login →
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+  return (
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+
+      {/* Background blobs */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-4xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+
+          {/* Left — Benefits */}
+          <div className="hidden lg:block">
+            <div className="flex items-center gap-2.5 mb-8">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-200">
+                <FaPlane className="text-white text-sm rotate-45" />
+              </div>
+              <div className="leading-none">
+                <p className="text-slate-900 font-black text-lg">Pula</p>
+                <p className="text-blue-500 text-[9px] font-bold uppercase tracking-[0.15em]">Tourism AI</p>
+              </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-[0.1em] text-white uppercase drop-shadow-md">Register</h1>
-            <div className="h-1.5 w-16 bg-blue-600 rounded-full mt-2" />
+
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">
+              Your intelligent<br />
+              <span className="text-blue-600">Botswana safari</span><br />
+              starts here.
+            </h2>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8">
+              Join thousands discovering Botswana through personalised AI recommendations, interactive maps, and smart booking.
+            </p>
+
+            <div className="space-y-3">
+              {FEATURES.map((f, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-5 h-5 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FaCheckCircle className="text-blue-500 text-[9px]" />
+                  </div>
+                  <p className="text-slate-600 text-sm font-medium">{f}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative group">
-                <FaUserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors z-20" />
-                <input required name="firstName" type="text" value={formData.firstName} onChange={handleChange} placeholder="First Name"
-                  className="w-full bg-white/90 rounded-2xl py-4 pl-11 pr-4 outline-none text-slate-900 font-bold placeholder:text-slate-400 text-sm" />
+          {/* Right — Form */}
+          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-blue-500 via-blue-600 to-emerald-500" />
+
+            <div className="p-8">
+              <div className="mb-6">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Create account</h1>
+                <p className="text-slate-400 text-sm mt-1">Free forever · No credit card required</p>
               </div>
-              <div className="relative group">
-                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors z-20" />
-                <input required name="lastName" type="text" value={formData.lastName} onChange={handleChange} placeholder="Last Name"
-                  className="w-full bg-white/90 rounded-2xl py-4 pl-11 pr-4 outline-none text-slate-900 font-bold placeholder:text-slate-400 text-sm" />
-              </div>
-            </div>
 
-            <div className="relative group">
-              <FaEnvelope className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors z-20" />
-              <input required name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email Address"
-                className="w-full bg-white/90 rounded-2xl py-4 md:py-5 pl-14 pr-6 outline-none text-slate-900 font-bold placeholder:text-slate-400 text-sm md:text-base" />
-            </div>
-
-            <div className="relative group">
-              <FaLock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors z-20" />
-              <input required name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Password"
-                className="w-full bg-white/90 rounded-2xl py-4 md:py-5 pl-14 pr-6 outline-none text-slate-900 font-bold placeholder:text-slate-400 text-sm md:text-base" />
-            </div>
-
-            {formData.password.length > 0 && strengthScore >= 0 && (
-              <div className="px-1">
-                <div className="flex justify-between mb-1">
-                  <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">
-                    Security: {strengthConfig[strengthScore]?.label}
-                  </span>
+              {/* Error */}
+              {error && (
+                <div className="mb-5 p-3.5 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3">
+                  <FaExclamationCircle className="text-red-500 flex-shrink-0" />
+                  <p className="text-red-600 text-sm font-bold">{error}</p>
                 </div>
-                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-500 ${strengthConfig[strengthScore]?.color}`}
-                    style={{ width: strengthConfig[strengthScore]?.width }} />
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+
+                {/* Name row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                      First Name
+                    </label>
+                    <div className="relative">
+                      <FaUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-xs" />
+                      <input
+                        required
+                        name="firstName"
+                        type="text"
+                        value={formData.firstName}
+                        onChange={handleChange}
+                        placeholder="Kago"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-9 pr-3 text-slate-800 text-sm outline-none focus:bg-white focus:border-blue-300 transition-all placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                      Last Name
+                    </label>
+                    <div className="relative">
+                      <FaUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-xs" />
+                      <input
+                        required
+                        name="lastName"
+                        type="text"
+                        value={formData.lastName}
+                        onChange={handleChange}
+                        placeholder="Phuthego"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-9 pr-3 text-slate-800 text-sm outline-none focus:bg-white focus:border-blue-300 transition-all placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            <button type="submit" disabled={loading}
-              className={`w-full ${loading ? 'bg-slate-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-black py-4 md:py-5 rounded-2xl shadow-xl active:scale-[0.97] transition-all tracking-[0.05em] uppercase text-base md:text-lg mt-2`}>
-              {loading ? "Creating Account..." : "Create Account"}
-            </button>
+                {/* Email */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-sm" />
+                    <input
+                      required
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="you@example.com"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 text-slate-800 text-sm outline-none focus:bg-white focus:border-blue-300 transition-all placeholder:text-slate-300"
+                    />
+                  </div>
+                </div>
 
-            <p className="text-center text-slate-400 text-xs md:text-sm font-medium">
-              Already a member?{' '}
-              <Link href="/login" className="text-blue-400 font-bold hover:text-blue-300 transition-colors underline-offset-4 hover:underline">
-                Sign In
-              </Link>
-            </p>
-          </form>
+                {/* Password */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-sm" />
+                    <input
+                      required
+                      name="password"
+                      type={showPass ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-12 text-slate-800 text-sm outline-none focus:bg-white focus:border-blue-300 transition-all placeholder:text-slate-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(!showPass)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                    >
+                      {showPass ? <FaEyeSlash className="text-sm" /> : <FaEye className="text-sm" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Password strength */}
+                {passtouched && formData.password && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
+
+                    {/* Bar */}
+                    <div>
+                      <div className="flex justify-between mb-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          Password Strength
+                        </span>
+                        <span className={`text-[10px] font-black ${
+                          strengthScore <= 0 ? 'text-red-500' :
+                          strengthScore === 1 ? 'text-orange-500' :
+                          strengthScore === 2 ? 'text-yellow-500' :
+                          'text-emerald-500'
+                        }`}>
+                          {STRENGTH_CONFIG[Math.max(0, strengthScore)]?.label}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        {[0, 1, 2, 3].map(i => (
+                          <div
+                            key={i}
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                              i <= strengthScore
+                                ? STRENGTH_CONFIG[Math.max(0, strengthScore)]?.color
+                                : 'bg-slate-200'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Checklist */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {checks.map((c, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className={`text-xs ${c.done ? 'text-emerald-500' : 'text-slate-300'}`}>
+                            {c.done ? '✓' : '○'}
+                          </span>
+                          <span className={`text-[10px] font-bold ${c.done ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {c.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black py-3.5 rounded-2xl transition-all text-sm shadow-lg shadow-blue-200 hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  {loading ? 'Creating Account...' : 'Create Account'}
+                </button>
+              </form>
+
+              <p className="text-center text-slate-400 text-sm mt-5">
+                Already have an account?{' '}
+                <Link href="/login" className="text-blue-600 font-black hover:underline">
+                  Sign in →
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </main>
