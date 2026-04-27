@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import {
   FaEnvelope, FaLock, FaCheckCircle,
@@ -17,7 +16,6 @@ function LoginContent() {
   const [showPass, setShowPass] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
 
-  // Auto-fill email if coming from register
   useEffect(() => {
     const emailParam = searchParams.get('email');
     if (emailParam) {
@@ -31,6 +29,7 @@ function LoginContent() {
     setError("");
 
     try {
+      // Step 1: Login
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,8 +40,25 @@ function LoginContent() {
 
       if (res.ok) {
         setSuccess(true);
-        const redirect = searchParams.get('redirect') || '/dashboard';
-        setTimeout(() => router.push(redirect), 1500);
+        
+        // Step 2: Verify admin status
+        const verifyRes = await fetch("/api/admin/verify", {
+          credentials: "include"
+        });
+        
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          if (verifyData.isAdmin) {
+            setTimeout(() => router.push("/admin/dashboard"), 1500);
+          } else {
+            const redirect = searchParams.get('redirect') || '/dashboard';
+            setTimeout(() => router.push(redirect), 1500);
+          }
+        } else {
+          // Fallback to regular dashboard
+          const redirect = searchParams.get('redirect') || '/dashboard';
+          setTimeout(() => router.push(redirect), 1500);
+        }
       } else {
         setError(data.message || "Invalid credentials.");
       }
@@ -55,16 +71,9 @@ function LoginContent() {
 
   return (
     <div className="w-full max-w-md">
-
-      {/* Card */}
       <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
-
-        {/* Top accent */}
         <div className="h-1.5 bg-gradient-to-r from-blue-500 via-blue-600 to-emerald-500" />
-
         <div className="p-8">
-
-          {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 mb-4">
               <FaPlane className="text-white text-xl rotate-45" />
@@ -73,7 +82,6 @@ function LoginContent() {
             <p className="text-slate-400 text-sm mt-1">Sign in to your Pula Tourism account</p>
           </div>
 
-          {/* Success banner */}
           {searchParams.get('registered') && !error && !success && (
             <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
               <FaCheckCircle className="text-emerald-500 flex-shrink-0" />
@@ -81,15 +89,13 @@ function LoginContent() {
             </div>
           )}
 
-          {/* Login success */}
           {success && (
             <div className="mb-5 p-3.5 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3 animate-pulse">
               <FaCheckCircle className="text-blue-500 flex-shrink-0" />
-              <p className="text-blue-700 text-sm font-bold">Signed in! Redirecting to dashboard...</p>
+              <p className="text-blue-700 text-sm font-bold">Signed in! Redirecting...</p>
             </div>
           )}
 
-          {/* Error banner */}
           {error && (
             <div className="mb-5 p-3.5 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3">
               <FaExclamationCircle className="text-red-500 flex-shrink-0" />
@@ -97,10 +103,7 @@ function LoginContent() {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSignIn} className="space-y-4">
-
-            {/* Email */}
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
                 Email Address
@@ -118,7 +121,6 @@ function LoginContent() {
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -148,7 +150,6 @@ function LoginContent() {
               </div>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading || success}
@@ -158,14 +159,12 @@ function LoginContent() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-slate-100" />
             <span className="text-slate-300 text-xs font-bold">OR</span>
             <div className="flex-1 h-px bg-slate-100" />
           </div>
 
-          {/* Register link */}
           <p className="text-center text-slate-500 text-sm">
             Don't have an account?{' '}
             <Link href="/register" className="text-blue-600 font-black hover:underline">
@@ -175,7 +174,6 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* Security badge */}
       <div className="flex items-center justify-center gap-2 mt-5">
         <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
         <p className="text-slate-400 text-[10px] font-bold">
@@ -189,11 +187,8 @@ function LoginContent() {
 export default function Login() {
   return (
     <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
-
-      {/* Background blobs */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
-
       <div className="relative z-10 w-full max-w-md">
         <Suspense fallback={
           <div className="flex items-center justify-center py-20">

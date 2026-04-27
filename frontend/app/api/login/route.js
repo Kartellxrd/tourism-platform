@@ -42,18 +42,26 @@ export async function POST(req) {
       );
     }
 
-    // Success — set cookie
+    // Decode JWT to extract roles — no library needed
+    const tokenPayload = JSON.parse(
+      Buffer.from(data.access_token.split(".")[1], "base64").toString()
+    );
+    const roles = tokenPayload?.realm_access?.roles || [];
+    const isAdmin = roles.includes("admin");
+
+    // Set httpOnly cookie
     const cookieStore = await cookies();
     cookieStore.set("auth_token", data.access_token, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
-      maxAge:   60 * 60 * 24, // 24 hours
+      maxAge:   60 * 60 * 24,
       path:     "/",
       sameSite: "lax",
     });
 
+    // Return role so frontend knows where to redirect
     return NextResponse.json(
-      { message: "Login successful" },
+      { message: "Login successful", role: isAdmin ? "admin" : "user" },
       { status: 200 }
     );
 

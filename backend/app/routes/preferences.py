@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 
-from database import get_db
-from models.preference import UserPreference
-from routes.wishlist import get_current_user
+from ..database import get_db
+from ..models.preference import UserPreference
+from ..routes.wishlist import get_current_user
 
 router = APIRouter(prefix="/preferences", tags=["Preferences"])
 

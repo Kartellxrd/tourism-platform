@@ -1,7 +1,7 @@
 # backend/app/services/query_engine.py
 
 from datetime import datetime
-from services.ai_engine import get_recommendations, FEATURES
+from ..services.ai_engine import get_recommendations, FEATURES
 
 DESTINATION_INFO = {
     1:  { 'name': 'Okavango Delta',              'location': 'Maun',           'price': 4500 },

@@ -5,7 +5,7 @@
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from models.wishlist import Wishlist
+from ..models.wishlist import Wishlist
 
 
 def get_user_wishlist(db: Session, user_id: str) -> list[Wishlist]:

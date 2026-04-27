@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 
-from database import get_db
-from models.preference import UserPreference
-from services.query_engine import handle_query
-from services.ai_engine import FEATURES
-from routes.wishlist import get_current_user
+from ..database import get_db
+from ..models.preference import UserPreference
+from ..services.query_engine import handle_query
+from ..services.ai_engine import FEATURES
+from ..routes.wishlist import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["AI Assistant"])
 

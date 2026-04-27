@@ -1,27 +1,25 @@
-# backend/app/models/booking.py
-
-from sqlalchemy import Column, Integer, String, Date, Text, DECIMAL, DateTime
+from sqlalchemy import Column, Integer, String, Float, JSON, TIMESTAMP, Date, text
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
-from database import Base
+
+Base = declarative_base()
 
 class Booking(Base):
     __tablename__ = "bookings"
-
-    id               = Column(Integer, primary_key=True, autoincrement=True)
-    user_id          = Column(String(255), nullable=False)
-    dest_id          = Column(Integer, nullable=False)
-    dest_name        = Column(String(255), nullable=False)
-    dest_location    = Column(String(255))
-    dest_photo       = Column(String(500))
-    dest_gradient    = Column(String(200))
-    check_in         = Column(Date, nullable=False)
-    check_out        = Column(Date, nullable=False)
-    nights           = Column(Integer, nullable=False)
-    guests           = Column(Integer, default=1)
-    price_per_person = Column(DECIMAL(10,2), nullable=False)
-    total_price      = Column(DECIMAL(10,2), nullable=False)
-    status           = Column(String(50), default='pending')
-    payment_status   = Column(String(50), default='unpaid')
-    payment_intent   = Column(String(255))
-    special_requests = Column(Text)
-    created_at       = Column(DateTime, server_default=func.now())
+    
+    id = Column(Integer, primary_key=True, index=True)
+    booking_reference = Column(String(50), unique=True, nullable=False, index=True)
+    keycloak_user_id = Column(String(255), nullable=False)
+    destination_id = Column(Integer, nullable=False)
+    check_in = Column(Date, nullable=True)
+    check_out = Column(Date, nullable=True)
+    adults = Column(Integer, default=1)
+    children = Column(Integer, default=0)
+    vehicles = Column(Integer, default=0)
+    rooms = Column(Integer, default=1)
+    total_amount = Column(Float, default=0)
+    booking_data = Column(JSON, default={})
+    status = Column(String(50), default="pending")
+    payment_status = Column(String(50), default="pending")
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

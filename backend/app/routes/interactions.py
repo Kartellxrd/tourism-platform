@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from database import get_db
-from models.interaction import Interaction
-from models.preference import UserPreference
-from services.ai_engine import update_user_vector_from_interaction, FEATURES
-from routes.wishlist import get_current_user
+from ..database import get_db
+from ..models.interaction import Interaction
+from ..models.preference import UserPreference
+from ..services.ai_engine import update_user_vector_from_interaction, FEATURES
+from ..routes.wishlist import get_current_user
 
 router = APIRouter(prefix="/interactions", tags=["Interactions"])
 

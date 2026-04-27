@@ -3,7 +3,8 @@ import {
   FaPlane, FaRobot, FaMapMarkerAlt, FaShieldAlt,
   FaGithub, FaLinkedin, FaInstagram
 } from 'react-icons/fa';
-import { ALL_DESTINATIONS } from './destinations';
+import { ALL_DESTINATIONS } from '../components/destinations';
+
 
 const FOOTER_LINKS = {
   Platform: [

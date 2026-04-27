@@ -1,201 +1,153 @@
-# backend/app/routes/bookings.py
-
-import os
-import stripe
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional
-from datetime import date, datetime
+from datetime import datetime, date
+import secrets
+import json
 
-from database import get_db
-from models.booking import Booking
-from routes.wishlist import get_current_user
+from ..database import get_db
+from ..models.destination import Destination
+from ..models.booking import Booking
+from .wishlist import get_current_user
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "pk_test_51TCMPDCCKiNxzmzdIpOaXR9vkiB2STEglZAo8fBKSDj8HmSkUmTLLfMEtfB9AfcaO8Je9HkiLkTdG7BdyFrjhqwx00KjJR141z")
-FRONTEND_URL   = os.getenv("FRONTEND_URL", "http://localhost:3000")
+router = APIRouter(prefix="/api/bookings", tags=["Bookings"])
 
-router = APIRouter(prefix="/bookings", tags=["Bookings"])
-
-
-# ── Schemas ───────────────────────────────────────────────────────────────────
-class BookingCreate(BaseModel):
-    dest_id:          int
-    dest_name:        str
-    dest_location:    Optional[str] = None
-    dest_photo:       Optional[str] = None
-    dest_gradient:    Optional[str] = None
-    check_in:         date
-    check_out:        date
-    guests:           int           = 1
-    price_per_person: float
-    special_requests: Optional[str] = None
-
-
-class BookingOut(BaseModel):
-    id:               int
-    dest_id:          int
-    dest_name:        str
-    dest_location:    Optional[str]
-    dest_photo:       Optional[str]
-    dest_gradient:    Optional[str]
-    check_in:         date
-    check_out:        date
-    nights:           int
-    guests:           int
-    price_per_person: float
-    total_price:      float
-    status:           str
-    payment_status:   str
-    special_requests: Optional[str]
-    created_at:       datetime
-
-    class Config:
-        from_attributes = True
-
-
-# ── POST /bookings ─────────────────────────────────────────────────────────────
-@router.post("", response_model=dict)
-async def create_booking(
-    payload: BookingCreate,
-    db:      Session = Depends(get_db),
-    user:    dict    = Depends(get_current_user),
+@router.get("/user")
+async def get_user_bookings(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
 ):
-    # Calculate nights and total price
-    nights = (payload.check_out - payload.check_in).days
-    if nights <= 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Check-out date must be after check-in date"
-        )
-
-    total_price = payload.price_per_person * payload.guests * nights
-
-    # Save booking to MySQL with pending status
-    booking = Booking(
-        user_id          = user["sub"],
-        dest_id          = payload.dest_id,
-        dest_name        = payload.dest_name,
-        dest_location    = payload.dest_location,
-        dest_photo       = payload.dest_photo,
-        dest_gradient    = payload.dest_gradient,
-        check_in         = payload.check_in,
-        check_out        = payload.check_out,
-        nights           = nights,
-        guests           = payload.guests,
-        price_per_person = payload.price_per_person,
-        total_price      = total_price,
-        status           = "pending",
-        payment_status   = "unpaid",
-        special_requests = payload.special_requests,
-    )
-    db.add(booking)
-    db.commit()
-    db.refresh(booking)
-
-    # Try Stripe checkout
+    """Get user's bookings"""
+    user_id = user.get("id") or user.get("sub", "demo_user_123")
+    
     try:
-        session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency":     "bwp",
-                    "product_data": {
-                        "name":        f"{payload.dest_name} — {nights} night(s)",
-                        "description": f"{payload.guests} guest(s) · {payload.check_in} to {payload.check_out}",
-                    },
-                    "unit_amount": int(total_price * 100),
-                },
-                "quantity": 1,
-            }],
-            mode        = "payment",
-            success_url = f"{FRONTEND_URL}/dashboard/bookings?success=true&booking_id={booking.id}",
-            cancel_url  = f"{FRONTEND_URL}/dashboard/explore?cancelled=true",
-            metadata    = {"booking_id": str(booking.id)},
+        # Query bookings from database
+        bookings = db.query(Booking).filter(Booking.keycloak_user_id == user_id).all()
+        
+        result = []
+        for booking in bookings:
+            # Get destination details
+            destination = db.query(Destination).filter(Destination.id == booking.destination_id).first()
+            
+            # Calculate nights
+            nights = 1
+            if booking.check_in and booking.check_out:
+                nights = max(1, (booking.check_out - booking.check_in).days)
+            
+            # Safely get booking_data
+            booking_data = {}
+            if booking.booking_data:
+                if isinstance(booking.booking_data, str):
+                    booking_data = json.loads(booking.booking_data)
+                else:
+                    booking_data = booking.booking_data
+            
+            result.append({
+                "id": booking.id,
+                "booking_reference": booking.booking_reference,
+                "destination_id": booking.destination_id,
+                "destination_name": destination.name if destination else "Unknown",
+                "destination_location": destination.location if destination else "Botswana",
+                "destination_photo": destination.photo_url if destination else None,
+                "check_in": booking.check_in.strftime("%Y-%m-%d") if booking.check_in else None,
+                "check_out": booking.check_out.strftime("%Y-%m-%d") if booking.check_out else None,
+                "nights": nights,
+                "guests": booking.adults or 1,
+                "vehicles": booking.vehicles or 0,
+                "rooms": booking.rooms or 1,
+                "total_price": float(booking.total_amount) if booking.total_amount else 0,
+                "booking_status": booking.status,
+                "payment_status": booking.payment_status,
+                "payment_method": booking_data.get("payment_method", "card"),
+                "created_at": booking.created_at.isoformat() if booking.created_at else None
+            })
+        
+        return {"bookings": result}
+    except Exception as e:
+        print(f"Error getting bookings: {str(e)}")
+        return {"bookings": []}
+
+@router.post("/create")
+async def create_booking(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """Create a new booking"""
+    try:
+        data = await request.json()
+        user_id = user.get("id") or user.get("sub", "demo_user_123")
+        
+        # Generate unique booking reference
+        booking_ref = f"BOK_{datetime.now().strftime('%Y%m%d')}_{secrets.token_hex(3).upper()}"
+        
+        # Parse dates
+        check_in = None
+        check_out = None
+        if data.get("check_in"):
+            check_in = datetime.strptime(data.get("check_in"), "%Y-%m-%d").date()
+        if data.get("check_out"):
+            check_out = datetime.strptime(data.get("check_out"), "%Y-%m-%d").date()
+        
+        # Determine status based on payment
+        total_amount = data.get("total_amount", 0)
+        if total_amount == 0:
+            status = "confirmed"
+            payment_status = "free"
+        else:
+            status = "confirmed"
+            payment_status = "paid"
+        
+        new_booking = Booking(
+            booking_reference=data.get("booking_reference") or booking_ref,
+            keycloak_user_id=user_id,
+            destination_id=data.get("destination_id"),
+            check_in=check_in,
+            check_out=check_out,
+            adults=data.get("guests", 1),
+            vehicles=data.get("vehicles", 0),
+            rooms=data.get("rooms", 1),
+            total_amount=total_amount,
+            booking_data={
+                "payment_method": data.get("payment_method", "card"),
+                "special_requests": data.get("special_requests", ""),
+                "payment_intent_id": data.get("payment_intent_id")
+            },
+            status=status,
+            payment_status=payment_status
         )
-
-        # Save Stripe session ID
-        booking.payment_intent = session.id
+        
+        db.add(new_booking)
         db.commit()
-
+        db.refresh(new_booking)
+        
         return {
-            "booking_id":   booking.id,
-            "checkout_url": session.url,
-            "total_price":  float(total_price),
-            "nights":       nights,
+            "success": True,
+            "booking_reference": new_booking.booking_reference,
+            "message": "Booking created successfully"
         }
+    except Exception as e:
+        print(f"Error creating booking: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    except Exception:
-        # Stripe not configured — Option A fallback, confirm directly
-        booking.status         = "confirmed"
-        booking.payment_status = "paid"
-        db.commit()
-
-        return {
-            "booking_id":   booking.id,
-            "checkout_url": None,
-            "total_price":  float(total_price),
-            "nights":       nights,
-        }
-
-
-# ── GET /bookings ──────────────────────────────────────────────────────────────
-@router.get("", response_model=dict)
-async def get_bookings(
-    db:   Session = Depends(get_db),
-    user: dict    = Depends(get_current_user),
-):
-    bookings = (
-        db.query(Booking)
-        .filter(Booking.user_id == user["sub"])
-        .order_by(Booking.created_at.desc())
-        .all()
-    )
-
-    return {
-        "bookings": [BookingOut.model_validate(b).model_dump() for b in bookings],
-        "total":    len(bookings),
-    }
-
-
-# ── PUT /bookings/{booking_id}/confirm ────────────────────────────────────────
-@router.put("/{booking_id}/confirm")
-async def confirm_booking(
-    booking_id: int,
-    db:         Session = Depends(get_db),
-    user:       dict    = Depends(get_current_user),
-):
-    booking = db.query(Booking).filter(
-        Booking.id      == booking_id,
-        Booking.user_id == user["sub"],
-    ).first()
-
-    if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
-
-    booking.status         = "confirmed"
-    booking.payment_status = "paid"
-    db.commit()
-
-    return {"message": "Booking confirmed", "booking_id": booking_id}
-
-
-# ── DELETE /bookings/{booking_id} ─────────────────────────────────────────────
 @router.delete("/{booking_id}")
 async def cancel_booking(
     booking_id: int,
-    db:         Session = Depends(get_db),
-    user:       dict    = Depends(get_current_user),
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
 ):
-    booking = db.query(Booking).filter(
-        Booking.id      == booking_id,
-        Booking.user_id == user["sub"],
-    ).first()
-
-    if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
-
-    booking.status = "cancelled"
-    db.commit()
-
-    return {"message": "Booking cancelled", "booking_id": booking_id}
+    """Cancel a booking"""
+    try:
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+        
+        booking.status = "cancelled"
+        db.commit()
+        
+        return {"success": True, "message": "Booking cancelled"}
+    except Exception as e:
+        print(f"Error cancelling booking: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

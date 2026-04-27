@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import {
   FaPlane, FaCompass, FaMapMarkerAlt, FaHeart, FaCalendarAlt,
-  FaCog, FaBars, FaTimes, FaSignOutAlt, FaUserCircle
+  FaCog, FaBars, FaTimes, FaSignOutAlt, FaUserCircle,
+  FaChartLine, FaTree, FaRobot
 } from 'react-icons/fa';
 import { useUser } from './useUser';
 
@@ -10,8 +11,9 @@ const navItems = [
   { icon: <FaCompass />, label: 'Dashboard', href: '/dashboard' },
   { icon: <FaMapMarkerAlt />, label: 'Explore', href: '/dashboard/explore' },
   { icon: <FaHeart />, label: 'Wishlist', href: '/dashboard/wishlist' },
-  { icon: <FaCalendarAlt />, label: 'My Bookings', href: '/dashboard/bookings' },
-  { icon: <FaCog />, label: 'Settings', href: '/dashboard/settings' },
+  { icon: <FaCalendarAlt />, label: 'Bookings', href: '/dashboard/bookings' },
+  { icon: <FaTree />, label: 'Wildlife Calendar', href: '/dashboard/wildlife' },
+  { icon: <FaRobot />, label: 'Plan Trip', href: '/dashboard/itinerary' },
 ];
 
 export default function Sidebar({ active = 'Dashboard' }) {
@@ -42,7 +44,7 @@ export default function Sidebar({ active = 'Dashboard' }) {
         />
       )}
 
-      {/* Sidebar — ALWAYS w-64 (256px) */}
+      {/* Sidebar */}
       <aside
         className={`
           fixed top-0 left-0 h-full w-64
@@ -74,8 +76,8 @@ export default function Sidebar({ active = 'Dashboard' }) {
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {/* Navigation - No scrollbar */}
+        <nav className="flex-1 px-3 py-4">
           <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] px-3 mb-3">Menu</p>
           <div className="flex flex-col gap-1">
             {navItems.map(({ icon, label, href }) => {
@@ -102,7 +104,7 @@ export default function Sidebar({ active = 'Dashboard' }) {
           </div>
         </nav>
 
-        {/* Bottom */}
+        {/* User Profile & Logout */}
         <div className="px-3 pb-5 pt-4 border-t border-white/[0.06] flex flex-col gap-2">
           <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.04] rounded-xl">
             <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -114,7 +116,6 @@ export default function Sidebar({ active = 'Dashboard' }) {
             </div>
           </div>
 
-          {/* Red logout */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:text-red-300 hover:border-red-400/30 transition-all group"

@@ -298,53 +298,64 @@ function ProfileTab() {
 
 // ── Preferences Tab ───────────────────────────────────────────────────────────
 function PreferencesTab() {
-  const [interests, setInterests]         = useState([]);
-  const [budget, setBudget]               = useState('mid');
-  const [travelStyle, setStyle]           = useState('solo');
-  const [saved, setSaved]                 = useState(false);
-  const [loading, setLoading]             = useState(false);
-  const [fetchingPrefs, setFetchingPrefs] = useState(true);
-  const [error, setError]                 = useState(null);
+  const [prefs, setPrefs] = useState({
+    wildlife: 0, photography: 0, birding: 0, luxury: 0,
+    adventure: 0, culture: 0, family: 0, stargazing: 0,
+    water: 0, desert: 0,
+    budget: 'mid',
+    travel_style: 'solo'
+  });
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [fetching, setFetching] = useState(true);
 
-  const allInterests = [
-    'Wildlife', 'Photography', 'Birding', 'Luxury',
-    'Adventure', 'Culture', 'Family', 'Stargazing', 'Water', 'Desert'
+  const interests = [
+    { key: 'wildlife',    label: 'Wildlife' },
+    { key: 'photography', label: 'Photography' },
+    { key: 'birding',     label: 'Birding' },
+    { key: 'luxury',      label: 'Luxury' },
+    { key: 'adventure',   label: 'Adventure' },
+    { key: 'culture',     label: 'Culture' },
+    { key: 'family',      label: 'Family' },
+    { key: 'stargazing',  label: 'Stargazing' },
+    { key: 'water',       label: 'Water' },
+    { key: 'desert',      label: 'Desert' },
   ];
 
-  const interestToField = {
-    Wildlife: 'wildlife', Photography: 'photography', Birding: 'birding',
-    Luxury: 'luxury', Adventure: 'adventure', Culture: 'culture',
-    Family: 'family', Stargazing: 'stargazing', Water: 'water', Desert: 'desert',
-  };
-
   useEffect(() => {
-    const loadPrefs = async () => {
-      try {
-        const res = await fetch('/api/preferences');
-        if (res.ok) {
-          const data = await res.json();
-          const savedInterests = Object.entries(interestToField)
-            .filter(([_, field]) => (data[field] || 0) >= 0.7)
-            .map(([label]) => label);
-          setInterests(savedInterests);
-          setBudget(data.budget || 'mid');
-          setStyle(data.travel_style || 'solo');
-        }
-      } catch (_) {}
-      finally { setFetchingPrefs(false); }
-    };
-    loadPrefs();
+    loadPreferences();
   }, []);
 
-  const toggleInterest = (i) =>
-    setInterests(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]);
+  const loadPreferences = async () => {
+    try {
+      const res = await fetch('/api/preferences');
+      if (res.ok) {
+        const data = await res.json();
+        setPrefs(p => ({
+          wildlife:    data.wildlife     ?? 0,
+          photography: data.photography  ?? 0,
+          birding:     data.birding      ?? 0,
+          luxury:      data.luxury       ?? 0,
+          adventure:   data.adventure    ?? 0,
+          culture:     data.culture      ?? 0,
+          family:      data.family       ?? 0,
+          stargazing:  data.stargazing   ?? 0,
+          water:       data.water        ?? 0,
+          desert:      data.desert       ?? 0,
+          budget:      data.budget       || 'mid',
+          travel_style: data.travel_style || 'solo',
+        }));
+      }
+    } catch (_) {
+      // keep defaults
+    } finally {
+      setFetching(false);
+    }
+  };
 
-  const buildPayload = () => {
-    const payload = { budget, travel_style: travelStyle };
-    Object.entries(interestToField).forEach(([label, field]) => {
-      payload[field] = interests.includes(label) ? 1.0 : 0.0;
-    });
-    return payload;
+  const toggleInterest = (key) => {
+    setPrefs(p => ({ ...p, [key]: p[key] === 1 ? 0 : 1 }));
   };
 
   const save = async () => {
@@ -354,23 +365,23 @@ function PreferencesTab() {
       const res = await fetch('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload()),
+        body: JSON.stringify(prefs),
       });
       if (res.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       } else {
         const data = await res.json();
-        setError(data.message || 'Failed to save.');
+        setError(data.message || 'Failed to save');
       }
     } catch {
-      setError('Cannot connect to backend. Is FastAPI running?');
+      setError('Cannot connect to backend – is FastAPI running?');
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetchingPrefs) {
+  if (fetching) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -390,25 +401,28 @@ function PreferencesTab() {
         </div>
       </div>
 
+      {/* Interests */}
       <div className="mb-6">
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Your Interests</p>
         <div className="flex flex-wrap gap-2">
-          {allInterests.map(i => (
+          {interests.map(({ key, label }) => (
             <button
-              key={i}
-              onClick={() => toggleInterest(i)}
+              key={key}
+              onClick={() => toggleInterest(key)}
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                interests.includes(i)
+                prefs[key] === 1
                   ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200'
                   : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-blue-200 hover:text-blue-600'
               }`}
             >
-              {interests.includes(i) && <FaCheck className="inline mr-1.5 text-[9px]" />}{i}
+              {prefs[key] === 1 && <FaCheck className="inline mr-1.5 text-[9px]" />}
+              {label}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Budget & Travel Style (unchanged from your original) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Budget Range</p>
@@ -418,10 +432,10 @@ function PreferencesTab() {
             { id: 'luxury', label: 'Luxury (P 5,000+)' },
           ].map(o => (
             <label key={o.id} className="flex items-center gap-3 py-2.5 cursor-pointer group">
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${budget === o.id ? 'border-blue-600 bg-blue-600' : 'border-slate-200 group-hover:border-blue-300'}`}>
-                {budget === o.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${prefs.budget === o.id ? 'border-blue-600 bg-blue-600' : 'border-slate-200 group-hover:border-blue-300'}`}>
+                {prefs.budget === o.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
               </div>
-              <input type="radio" className="hidden" checked={budget === o.id} onChange={() => setBudget(o.id)} />
+              <input type="radio" className="hidden" checked={prefs.budget === o.id} onChange={() => setPrefs(p => ({ ...p, budget: o.id }))} />
               <span className="text-sm text-slate-600">{o.label}</span>
             </label>
           ))}
@@ -435,10 +449,10 @@ function PreferencesTab() {
             { id: 'group',  label: 'Group' },
           ].map(o => (
             <label key={o.id} className="flex items-center gap-3 py-2.5 cursor-pointer group">
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${travelStyle === o.id ? 'border-blue-600 bg-blue-600' : 'border-slate-200 group-hover:border-blue-300'}`}>
-                {travelStyle === o.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${prefs.travel_style === o.id ? 'border-blue-600 bg-blue-600' : 'border-slate-200 group-hover:border-blue-300'}`}>
+                {prefs.travel_style === o.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
               </div>
-              <input type="radio" className="hidden" checked={travelStyle === o.id} onChange={() => setStyle(o.id)} />
+              <input type="radio" className="hidden" checked={prefs.travel_style === o.id} onChange={() => setPrefs(p => ({ ...p, travel_style: o.id }))} />
               <span className="text-sm text-slate-600">{o.label}</span>
             </label>
           ))}

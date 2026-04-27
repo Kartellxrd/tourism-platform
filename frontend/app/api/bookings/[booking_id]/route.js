@@ -3,6 +3,22 @@ import { cookies } from "next/headers";
 
 const FASTAPI = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+// Used by checkout page to load booking summary by reference (no auth needed)
+export async function GET(request, { params }) {
+  try {
+    const { booking_id } = await params;
+
+    const res = await fetch(`${FASTAPI}/bookings/${booking_id}`);
+    const data = await res.json();
+
+    return NextResponse.json(data, { status: res.status });
+  } catch (error) {
+    console.error("GET booking error:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
+}
+
+// Confirm a booking
 export async function PUT(request, { params }) {
   try {
     const cookieStore = await cookies();
@@ -30,6 +46,7 @@ export async function PUT(request, { params }) {
   }
 }
 
+// Cancel/delete a booking
 export async function DELETE(request, { params }) {
   try {
     const cookieStore = await cookies();

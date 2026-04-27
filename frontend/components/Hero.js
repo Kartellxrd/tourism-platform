@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FaRobot, FaMapMarkerAlt, FaStar, FaShieldAlt, FaBolt } from 'react-icons/fa';
-import { ALL_DESTINATIONS } from './destinations';
+import { ALL_DESTINATIONS } from '../components/destinations';
+
 
 const ROTATING_WORDS = [
   'Intelligently.',

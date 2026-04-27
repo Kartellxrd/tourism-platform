@@ -2,13 +2,18 @@ services:
   keycloak_db:
     image: postgres:15
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data # <--- THIS SAVES YOUR DATA ON YOUR PC
+      - ./postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: password
     networks:
       - pula_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -23,7 +28,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - keycloak_db
+      keycloak_db:
+        condition: service_healthy
     networks:
       - pula_network
 
